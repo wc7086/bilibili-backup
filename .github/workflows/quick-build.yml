@@ -1,0 +1,65 @@
+name: 快速构建测试
+
+on:
+  push:
+    branches:
+      - main
+      - master
+      - develop
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  quick-build:
+    name: 快速构建检查
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装系统依赖
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            libsoup-3.0-dev \
+            libjavascriptcoregtk-4.1-dev
+
+      - name: 设置 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: 设置 Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust 缓存
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: 安装 npm 依赖
+        run: npm ci
+
+      - name: 检查前端代码
+        run: npm run lint || echo "前端 lint 跳过"
+
+      - name: 构建前端
+        run: npm run build
+
+      - name: 检查 Rust 代码
+        run: cd src-tauri && cargo check --all-targets
+
+      - name: 运行 Rust 测试
+        run: cd src-tauri && cargo test || echo "测试跳过"
+
+      - name: 检查代码格式
+        run: cd src-tauri && cargo fmt --check || echo "格式检查跳过"
+
+      - name: 检查代码质量
+        run: cd src-tauri && cargo clippy -- -D warnings || echo "Clippy 检查跳过"

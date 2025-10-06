@@ -1,0 +1,52 @@
+[package]
+name = "bilibili-backup-tauri"
+version = "2.2.0"
+edition = "2021"
+description = "哔哩哔哩账号备份工具 - Tauri版"
+authors = ["Claude Code"]
+license = "MIT"
+
+[build-dependencies]
+tauri-build = { version = "1.5", features = [] }
+
+[dependencies]
+# Tauri核心
+tauri = { version = "1.5", features = ["dialog-all", "fs-all", "path-all", "shell-open", "window-all"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# HTTP客户端
+reqwest = { version = "0.11", features = ["json", "cookies"] }
+
+# 异步运行时
+tokio = { version = "1.35", features = ["full"] }
+async-trait = "0.1"
+
+# 序列化和数据处理
+chrono = { version = "0.4", features = ["serde"] }
+
+# 加密和编码
+md5 = "0.7"
+urlencoding = "2.1"
+regex = "1.10"
+rand = "0.8"
+
+# 日志
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# 错误处理
+anyhow = "1.0"
+thiserror = "1.0"
+
+[features]
+# 默认启用 Tauri 的自定义协议
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]
+
+[profile.release]
+panic = "abort"
+codegen-units = 1
+lto = true
+opt-level = "z"
+strip = true
