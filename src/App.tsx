@@ -1,63 +1,40 @@
-import { useState } from "react";
-import { invoke } from "@tauri-apps/api/tauri";
-import { Button, Card, Typography, Space } from "antd";
-import "./App.css";
+/**
+ * App 根组件
+ *
+ * 配置路由和全局布局
+ */
 
-const { Title, Paragraph } = Typography;
+import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import Layout from './components/Layout';
+import Login from './pages/Login';
+import Dashboard from './pages/Dashboard';
+import Following from './pages/Following';
+import Followers from './pages/Followers';
+import Blacklist from './pages/Blacklist';
+import Favorites from './pages/Favorites';
+import History from './pages/History';
+import Bangumi from './pages/Bangumi';
+import ToView from './pages/ToView';
+import './App.css';
 
 function App() {
-  const [greetMsg, setGreetMsg] = useState("");
-  const [version, setVersion] = useState("");
-  const [name, setName] = useState("用户");
-
-  async function greet() {
-    // 调用Rust后端命令
-    const message = await invoke<string>("greet", { name });
-    setGreetMsg(message);
-  }
-
-  async function getVersion() {
-    const ver = await invoke<string>("get_version");
-    setVersion(ver);
-  }
-
   return (
-    <div className="container">
-      <Title level={1}>哔哩哔哩账号备份</Title>
-
-      <Card title="欢迎使用" style={{ width: 600, margin: "20px auto" }}>
-        <Space direction="vertical" style={{ width: "100%" }}>
-          <Paragraph>
-            这是一个使用 Tauri + Rust + React 构建的B站账号备份工具。
-          </Paragraph>
-
-          <div>
-            <input
-              type="text"
-              placeholder="输入你的名字..."
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              style={{
-                padding: "8px 12px",
-                marginRight: "8px",
-                border: "1px solid #d9d9d9",
-                borderRadius: "4px",
-              }}
-            />
-            <Button type="primary" onClick={greet}>
-              打招呼
-            </Button>
-          </div>
-
-          {greetMsg && <Paragraph type="success">{greetMsg}</Paragraph>}
-
-          <div>
-            <Button onClick={getVersion}>获取版本信息</Button>
-            {version && <Paragraph>当前版本: v{version}</Paragraph>}
-          </div>
-        </Space>
-      </Card>
-    </div>
+    <Router>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/" element={<Layout />}>
+          <Route index element={<Navigate to="/dashboard" replace />} />
+          <Route path="dashboard" element={<Dashboard />} />
+          <Route path="following" element={<Following />} />
+          <Route path="followers" element={<Followers />} />
+          <Route path="blacklist" element={<Blacklist />} />
+          <Route path="favorites" element={<Favorites />} />
+          <Route path="history" element={<History />} />
+          <Route path="bangumi" element={<Bangumi />} />
+          <Route path="toview" element={<ToView />} />
+        </Route>
+      </Routes>
+    </Router>
   );
 }
 

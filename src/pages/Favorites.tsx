@@ -1,0 +1,367 @@
+/**
+ * 收藏管理页面
+ *
+ * 支持备份、还原、清空收藏夹
+ */
+
+import { useState } from 'react';
+import {
+  Card,
+  Button,
+  Table,
+  Space,
+  message,
+  Modal,
+  Statistic,
+  Row,
+  Col,
+  Input,
+  Progress,
+  Form,
+  InputNumber,
+  Switch,
+  Tag,
+  Collapse,
+} from 'antd';
+import {
+  DownloadOutlined,
+  UploadOutlined,
+  DeleteOutlined,
+  ExportOutlined,
+  ImportOutlined,
+  SearchOutlined,
+  FolderOutlined,
+} from '@ant-design/icons';
+import type { FavFolder, RestoreFavoritesOptions, RestoreResult } from '../types/api';
+import {
+  backupFavorites,
+  restoreFavorites,
+  clearFavorites,
+  selectJsonFile,
+  saveJsonFile,
+} from '../utils/api';
+import { writeTextFile, readTextFile } from '@tauri-apps/api/fs';
+
+const { Panel } = Collapse;
+
+export default function Favorites() {
+  const [loading, setLoading] = useState(false);
+  const [data, setData] = useState<FavFolder[]>([]);
+  const [filteredData, setFilteredData] = useState<FavFolder[]>([]);
+  const [searchText, setSearchText] = useState('');
+  const [restoreResult, setRestoreResult] = useState<RestoreResult | null>(null);
+
+  const handleBackup = async () => {
+    setLoading(true);
+    try {
+      const result = await backupFavorites();
+      setData(result);
+      setFilteredData(result);
+      message.success(`备份成功！共 ${result.length} 个收藏夹`);
+    } catch (error) {
+      message.error(`备份失败: ${error}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRestore = async () => {
+    if (data.length === 0) {
+      message.warning('请先备份或导入数据');
+      return;
+    }
+
+    Modal.confirm({
+      title: '还原收藏夹',
+      content: (
+        <Form
+          layout="vertical"
+          initialValues={{
+            continue_on_error: true,
+            batch_size: 10,
+            delay_ms: 1000,
+          }}
+        >
+          <Form.Item
+            label="遇到错误继续执行"
+            name="continue_on_error"
+            valuePropName="checked"
+          >
+            <Switch />
+          </Form.Item>
+          <Form.Item label="批量大小" name="batch_size">
+            <InputNumber min={1} max={50} style={{ width: '100%' }} />
+          </Form.Item>
+          <Form.Item label="延迟时间(毫秒)" name="delay_ms">
+            <InputNumber min={0} max={5000} style={{ width: '100%' }} />
+          </Form.Item>
+        </Form>
+      ),
+      okText: '开始还原',
+      cancelText: '取消',
+      onOk: async () => {
+        setLoading(true);
+        try {
+          const options: RestoreFavoritesOptions = {
+            continue_on_error: true,
+            batch_size: 10,
+            delay_ms: 1000,
+          };
+          const result = await restoreFavorites(data, options);
+          setRestoreResult(result);
+          message.success(result.message);
+        } catch (error) {
+          message.error(`还原失败: ${error}`);
+        } finally {
+          setLoading(false);
+        }
+      },
+    });
+  };
+
+  const handleClear = async () => {
+    Modal.confirm({
+      title: '确认清空',
+      content: '此操作将清空您的所有收藏夹，是否继续？',
+      okText: '确认',
+      okType: 'danger',
+      cancelText: '取消',
+      onOk: async () => {
+        setLoading(true);
+        try {
+          const result = await clearFavorites();
+          message.success(result.message);
+        } catch (error) {
+          message.error(`清空失败: ${error}`);
+        } finally {
+          setLoading(false);
+        }
+      },
+    });
+  };
+
+  const handleExport = async () => {
+    if (data.length === 0) {
+      message.warning('没有数据可导出');
+      return;
+    }
+
+    try {
+      const filePath = await saveJsonFile();
+      if (filePath) {
+        await writeTextFile(filePath, JSON.stringify(data, null, 2));
+        message.success('导出成功！');
+      }
+    } catch (error) {
+      message.error(`导出失败: ${error}`);
+    }
+  };
+
+  const handleImport = async () => {
+    try {
+      const filePath = await selectJsonFile();
+      if (filePath) {
+        const content = await readTextFile(filePath);
+        const imported = JSON.parse(content) as FavFolder[];
+        setData(imported);
+        setFilteredData(imported);
+        message.success(`导入成功！共 ${imported.length} 条数据`);
+      }
+    } catch (error) {
+      message.error(`导入失败: ${error}`);
+    }
+  };
+
+  const handleSearch = (value: string) => {
+    setSearchText(value);
+    if (!value) {
+      setFilteredData(data);
+    } else {
+      const filtered = data.filter((item) =>
+        item.title.toLowerCase().includes(value.toLowerCase())
+      );
+      setFilteredData(filtered);
+    }
+  };
+
+  const columns = [
+    {
+      title: '收藏夹',
+      dataIndex: 'title',
+      key: 'title',
+      render: (title: string, record: FavFolder) => (
+        <Space>
+          <FolderOutlined />
+          {title}
+          {record.attr === 0 && <Tag color="blue">默认</Tag>}
+        </Space>
+      ),
+    },
+    {
+      title: '收藏数',
+      dataIndex: 'mediaCount',
+      key: 'mediaCount',
+    },
+    {
+      title: '简介',
+      dataIndex: 'intro',
+      key: 'intro',
+      ellipsis: true,
+    },
+    {
+      title: '创建时间',
+      dataIndex: 'ctime',
+      key: 'ctime',
+      render: (time?: number) =>
+        time ? new Date(time * 1000).toLocaleString('zh-CN') : '-',
+    },
+  ];
+
+  const totalMedias = data.reduce((sum, folder) => sum + folder.mediaCount, 0);
+
+  return (
+    <div>
+      <Card
+        title="收藏管理"
+        extra={
+          <Space>
+            <Button
+              type="primary"
+              icon={<DownloadOutlined />}
+              onClick={handleBackup}
+              loading={loading}
+            >
+              备份
+            </Button>
+            <Button
+              icon={<UploadOutlined />}
+              onClick={handleRestore}
+              disabled={data.length === 0}
+              loading={loading}
+            >
+              还原
+            </Button>
+            <Button
+              danger
+              icon={<DeleteOutlined />}
+              onClick={handleClear}
+              loading={loading}
+            >
+              清空
+            </Button>
+            <Button icon={<ExportOutlined />} onClick={handleExport}>
+              导出
+            </Button>
+            <Button icon={<ImportOutlined />} onClick={handleImport}>
+              导入
+            </Button>
+          </Space>
+        }
+      >
+        <Row gutter={16} style={{ marginBottom: 16 }}>
+          <Col span={8}>
+            <Card>
+              <Statistic title="收藏夹总数" value={data.length} />
+            </Card>
+          </Col>
+          <Col span={8}>
+            <Card>
+              <Statistic title="收藏总数" value={totalMedias} />
+            </Card>
+          </Col>
+          <Col span={8}>
+            <Card>
+              <Statistic
+                title="显示条数"
+                value={filteredData.length}
+                suffix={`/ ${data.length}`}
+              />
+            </Card>
+          </Col>
+        </Row>
+
+        {restoreResult && (
+          <Card style={{ marginBottom: 16 }}>
+            <Row gutter={16}>
+              <Col span={8}>
+                <Statistic
+                  title="成功"
+                  value={restoreResult.success_count}
+                  valueStyle={{ color: '#3f8600' }}
+                />
+              </Col>
+              <Col span={8}>
+                <Statistic
+                  title="失败"
+                  value={restoreResult.failed_count}
+                  valueStyle={{ color: '#cf1322' }}
+                />
+              </Col>
+              <Col span={8}>
+                <Statistic title="总数" value={restoreResult.total_count} />
+              </Col>
+            </Row>
+            {restoreResult.success_count > 0 && (
+              <Progress
+                percent={Math.round(
+                  (restoreResult.success_count / restoreResult.total_count) * 100
+                )}
+                status={restoreResult.failed_count > 0 ? 'exception' : 'success'}
+                style={{ marginTop: 16 }}
+              />
+            )}
+          </Card>
+        )}
+
+        <Input
+          placeholder="搜索收藏夹名称"
+          prefix={<SearchOutlined />}
+          value={searchText}
+          onChange={(e) => handleSearch(e.target.value)}
+          style={{ marginBottom: 16 }}
+          allowClear
+        />
+
+        <Table
+          dataSource={filteredData}
+          columns={columns}
+          rowKey="id"
+          loading={loading}
+          pagination={{ pageSize: 20 }}
+          expandable={{
+            expandedRowRender: (record) => (
+              <div>
+                {record.medias && record.medias.length > 0 ? (
+                  <Collapse>
+                    {record.medias.map((media, index) => (
+                      <Panel header={media.title} key={index}>
+                        <p>
+                          <strong>ID:</strong> {media.id}
+                        </p>
+                        <p>
+                          <strong>类型:</strong> {media.type}
+                        </p>
+                        {media.bvid && (
+                          <p>
+                            <strong>BVID:</strong> {media.bvid}
+                          </p>
+                        )}
+                        {media.intro && (
+                          <p>
+                            <strong>简介:</strong> {media.intro}
+                          </p>
+                        )}
+                      </Panel>
+                    ))}
+                  </Collapse>
+                ) : (
+                  <p>暂无收藏内容</p>
+                )}
+              </div>
+            ),
+          }}
+        />
+      </Card>
+    </div>
+  );
+}
