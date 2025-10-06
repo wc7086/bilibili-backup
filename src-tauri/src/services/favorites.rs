@@ -1,7 +1,7 @@
 use crate::api::client::BiliClient;
 use crate::api::endpoints::{API_FAV_BATCH_DEL, API_FAV_COLLECT, API_FAV_CREATE, API_FAV_LIST, API_FAV_RESOURCES};
 use crate::api::error::{BiliError, Result};
-use crate::api::models::{ApiResult, FavFolder, FavInfo, Media, NormalPageData, RestoreResult};
+use crate::api::models::{ApiResult, FavInfo, Media, NormalPageData, RestoreResult};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::RwLock;

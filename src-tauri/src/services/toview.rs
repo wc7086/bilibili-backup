@@ -4,7 +4,6 @@ use crate::api::{
     error::BiliError,
     models::{ApiResult, ClearResult, RestoreResult, ToView, ToViewList},
 };
-use serde_json::json;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 

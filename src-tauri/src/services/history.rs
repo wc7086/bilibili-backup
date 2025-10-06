@@ -2,7 +2,7 @@ use crate::api::{
     client::BiliClient,
     endpoints::{API_HISTORY_CLEAR, API_HISTORY_LIST},
     error::BiliError,
-    models::{ApiResult, ClearResult, CursorPageData, History},
+    models::{ApiResult, ClearResult, History},
 };
 use serde::Deserialize;
 use std::sync::Arc;

@@ -2,7 +2,7 @@ use crate::api::{
     client::BiliClient,
     endpoints::{API_BANGUMI_FOLLOW, API_BANGUMI_LIST, API_BANGUMI_UNFOLLOW},
     error::BiliError,
-    models::{ApiResult, Bangumi, ClearResult, NormalPageData, RestoreResult},
+    models::{ApiResult, Bangumi, ClearResult, RestoreResult},
 };
 use serde::Deserialize;
 use serde_json::json;
