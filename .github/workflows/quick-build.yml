@@ -29,6 +29,12 @@ jobs:
             libsoup2.4-dev \
             libjavascriptcoregtk-4.1-dev
 
+          # 创建 4.0 → 4.1 符号链接以兼容旧版 API
+          sudo ln -sf /usr/lib/x86_64-linux-gnu/pkgconfig/webkit2gtk-4.1.pc \
+            /usr/lib/x86_64-linux-gnu/pkgconfig/webkit2gtk-4.0.pc
+          sudo ln -sf /usr/lib/x86_64-linux-gnu/pkgconfig/javascriptcoregtk-4.1.pc \
+            /usr/lib/x86_64-linux-gnu/pkgconfig/javascriptcoregtk-4.0.pc
+
       - name: 设置 Node.js
         uses: actions/setup-node@v4
         with:
